@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 // ==========================================
-// CORS CONFIGURATION
+// CORS
 // ==========================================
 app.use(
     cors({
@@ -20,9 +20,6 @@ app.use(
         allowedHeaders: ['Content-Type', 'Authorization']
     })
 );
-
-// Handle preflight requests
-app.options('*', cors());
 
 // ==========================================
 // BODY PARSER
@@ -43,7 +40,7 @@ mongoose
     });
 
 // ==========================================
-// ROOT TEST ROUTE
+// ROOT ROUTE
 // ==========================================
 app.get('/', (req, res) => {
     res.status(200).json({
@@ -124,6 +121,6 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // ==========================================
-// VERCEL EXPORT
+// VERCEL
 // ==========================================
 module.exports = app;
