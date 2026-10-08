@@ -12,18 +12,23 @@ const app = express();
 // ==========================================
 // CORS CONFIGURATION
 // ==========================================
-// Allow all origins
-app.use(cors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+    cors({
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    })
+);
+
+// Handle preflight requests
+app.options('*', cors());
 
 // ==========================================
-// MIDDLEWARE
+// BODY PARSER
 // ==========================================
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ==========================================
 // DATABASE CONNECTION
@@ -34,11 +39,11 @@ mongoose
         console.log('MongoDB Connected');
     })
     .catch((err) => {
-        console.error('MongoDB Connection Error:', err);
+        console.error('MongoDB Connection Error:', err.message);
     });
 
 // ==========================================
-// TEST ROUTE
+// ROOT TEST ROUTE
 // ==========================================
 app.get('/', (req, res) => {
     res.status(200).json({
@@ -48,7 +53,17 @@ app.get('/', (req, res) => {
 });
 
 // ==========================================
-// ROUTES
+// API TEST ROUTE
+// ==========================================
+app.get('/api/test', (req, res) => {
+    res.status(200).json({
+        message: 'API routing is working',
+        status: 'success'
+    });
+});
+
+// ==========================================
+// IMPORT ROUTES
 // ==========================================
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -70,7 +85,20 @@ app.use('/api/upload', uploadRoutes);
 // ==========================================
 // STATIC UPLOADS
 // ==========================================
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+    '/uploads',
+    express.static(path.join(__dirname, 'uploads'))
+);
+
+// ==========================================
+// 404 HANDLER
+// ==========================================
+app.use((req, res) => {
+    res.status(404).json({
+        message: 'Route not found',
+        path: req.originalUrl
+    });
+});
 
 // ==========================================
 // ERROR HANDLER
