@@ -18,26 +18,25 @@ const allowedOrigins = [
     'https://shopmate-frontend-six.vercel.app'
 ];
 
-app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests from Postman, Thunder Client, etc.
-        if (!origin) {
-            return callback(null, true);
-        }
+app.use(
+    cors({
+        origin: function (origin, callback) {
+            // Allow requests from Postman, Thunder Client, etc.
+            if (!origin) {
+                return callback(null, true);
+            }
 
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
 
-        return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Handle preflight requests
-app.options('*', cors());
+            return callback(new Error('Not allowed by CORS'));
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    })
+);
 
 // ===============================
 // MIDDLEWARE
@@ -47,15 +46,21 @@ app.use(express.json());
 // ===============================
 // DATABASE CONNECTION
 // ===============================
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+    .connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB Connected'))
-    .catch((err) => console.error('MongoDB Connection Error:', err));
+    .catch((err) => {
+        console.error('MongoDB Connection Error:', err);
+    });
 
 // ===============================
 // TEST ROUTE
 // ===============================
 app.get('/', (req, res) => {
-    res.send('API is running...');
+    res.status(200).json({
+        message: 'Shopmate API is running...',
+        status: 'success'
+    });
 });
 
 // ===============================
@@ -69,7 +74,7 @@ const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 
 // ===============================
-// USE ROUTES
+// API ROUTES
 // ===============================
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -84,10 +89,36 @@ app.use('/api/upload', uploadRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ===============================
-// PORT
+// ERROR HANDLER
+// ===============================
+app.use((err, req, res, next) => {
+    console.error('Server Error:', err.message);
+
+    if (err.message === 'Not allowed by CORS') {
+        return res.status(403).json({
+            message: 'CORS error: Origin not allowed'
+        });
+    }
+
+    res.status(500).json({
+        message: 'Internal Server Error'
+    });
+});
+
+// ===============================
+// LOCAL SERVER
 // ===============================
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+// ===============================
+// VERCEL EXPORT
+// ===============================
+module.exports = app;
+
+
