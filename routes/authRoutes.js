@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -19,11 +20,22 @@ const generateToken = (id) => {
 router.post('/register', async (req, res) => {
     const { name, email, password, role } = req.body;
 
+    // Validate name
+    const nameRegex = /^[A-Za-z]+(?:\s+[A-Za-z]+)*$/;
+
+    if (!name || !nameRegex.test(name.trim())) {
+        return res.status(400).json({
+            message: 'Please enter a valid name using letters only.'
+        });
+    }
+
     try {
         const userExists = await User.findOne({ email });
 
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({
+                message: 'User already exists'
+            });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -45,7 +57,13 @@ router.post('/register', async (req, res) => {
 
         // Sign a temporary token that expires in 15 minutes
         const tempToken = jwt.sign(
-            { name, email, password: hashedPassword, role: assignedRole, otp },
+            {
+                name,
+                email,
+                password: hashedPassword,
+                role: assignedRole,
+                otp
+            },
             process.env.JWT_SECRET,
             { expiresIn: '15m' }
         );
@@ -62,11 +80,13 @@ router.post('/register', async (req, res) => {
         res.status(200).json({
             message: 'OTP sent to email. Please verify.',
             tempToken,
-            otp: process.env.SMTP_USER ? undefined : otp // Auto-return OTP for easy dev testing
+            otp: process.env.SMTP_USER ? undefined : otp
         });
 
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({
+            message: error.message
+        });
     }
 });
 
@@ -77,28 +97,40 @@ router.post('/verify-otp', async (req, res) => {
     const { tempToken, otp } = req.body;
 
     if (!tempToken || !otp) {
-        return res.status(400).json({ message: 'Please provide token and OTP' });
+        return res.status(400).json({
+            message: 'Please provide token and OTP'
+        });
     }
 
     try {
         // Verify token
-        const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+        const decoded = jwt.verify(
+            tempToken,
+            process.env.JWT_SECRET
+        );
 
         if (decoded.otp !== otp) {
-            return res.status(400).json({ message: 'Invalid OTP' });
+            return res.status(400).json({
+                message: 'Invalid OTP'
+            });
         }
 
         // Check again if user exists to prevent duplicate registrations
-        const userExists = await User.findOne({ email: decoded.email });
+        const userExists = await User.findOne({
+            email: decoded.email
+        });
+
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({
+                message: 'User already exists'
+            });
         }
 
         // Create the user
         const user = await User.create({
             name: decoded.name,
             email: decoded.email,
-            password: decoded.password, // already hashed
+            password: decoded.password,
             role: decoded.role,
         });
 
@@ -113,13 +145,21 @@ router.post('/verify-otp', async (req, res) => {
                 cart: user.cart,
             });
         } else {
-            res.status(400).json({ message: 'Invalid user data' });
+            res.status(400).json({
+                message: 'Invalid user data'
+            });
         }
+
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
-            return res.status(400).json({ message: 'OTP has expired. Please register again.' });
+            return res.status(400).json({
+                message: 'OTP has expired. Please register again.'
+            });
         }
-        res.status(500).json({ message: error.message });
+
+        res.status(500).json({
+            message: error.message
+        });
     }
 });
 
@@ -140,13 +180,18 @@ router.post('/login', async (req, res) => {
                 role: user.role,
                 profilePicture: user.profilePicture,
                 token: generateToken(user._id),
-                cart: user.cart, // Return cart
+                cart: user.cart,
             });
         } else {
-            res.status(401).json({ message: 'Invalid email or password' });
+            res.status(401).json({
+                message: 'Invalid email or password'
+            });
         }
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({
+            message: error.message
+        });
     }
 });
 
@@ -154,15 +199,24 @@ router.post('/login', async (req, res) => {
 router.put('/cart', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
+
         if (user) {
             user.cart = req.body.cart || [];
+
             const updatedUser = await user.save();
+
             res.json(updatedUser.cart);
         } else {
-            res.status(404).json({ message: 'User not found' });
+            res.status(404).json({
+                message: 'User not found'
+            });
         }
+
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        res.status(500).json({
+            message: 'Server Error',
+            error: error.message
+        });
     }
 });
 
