@@ -1,3 +1,4 @@
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,29 +9,58 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS CONFIG (IMPORTANT for frontend on Vercel)
+// ===============================
+// CORS CONFIGURATION
+// ===============================
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://shopmate-frontend-six.vercel.app'
+];
+
 app.use(cors({
-    origin: [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://your-frontend.vercel.app"
-    ],
-    credentials: true
+    origin: function (origin, callback) {
+        // Allow requests from Postman, Thunder Client, etc.
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Handle preflight requests
+app.options('*', cors());
+
+// ===============================
+// MIDDLEWARE
+// ===============================
 app.use(express.json());
 
-// Database Connection
+// ===============================
+// DATABASE CONNECTION
+// ===============================
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB Connected'))
     .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// Test route
+// ===============================
+// TEST ROUTE
+// ===============================
 app.get('/', (req, res) => {
     res.send('API is running...');
 });
 
-// Routes
+// ===============================
+// ROUTES
+// ===============================
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -38,7 +68,9 @@ const messageRoutes = require('./routes/messageRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 
-// Use Routes
+// ===============================
+// USE ROUTES
+// ===============================
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
@@ -46,10 +78,14 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Static uploads
+// ===============================
+// STATIC UPLOADS
+// ===============================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ===============================
 // PORT
+// ===============================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
